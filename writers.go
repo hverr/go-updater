@@ -1,6 +1,8 @@
 package updater
 
 import (
+	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -8,6 +10,14 @@ import (
 )
 
 const atomicFilePrefix = "atomic-"
+
+// AbortWriter is a writer that can be aborted.
+type AbortWriter interface {
+	io.Writer
+
+	// Abort writing. This is called when an error occurs.
+	Abort()
+}
 
 // FileBuffer is a byte buffer stored on the filesystem.
 //
@@ -18,10 +28,15 @@ type FileBuffer struct {
 	opener    sync.Once
 	openError error
 	handle    *os.File
+	aborted   bool
 }
 
 // Write data to the temporary file.
 func (a *FileBuffer) Write(b []byte) (int, error) {
+	if a.aborted {
+		return 0, errors.New("Write operations aborted.")
+	}
+
 	// Open the file
 	a.opener.Do(func() {
 		if a.Path == "" {
@@ -37,6 +52,11 @@ func (a *FileBuffer) Write(b []byte) (int, error) {
 
 	// Write data to the temporary file
 	return a.handle.Write(b)
+}
+
+// Abort writing. Subsequent calls to Write will return an error
+func (a *FileBuffer) Abort() {
+	a.aborted = true
 }
 
 // Close the file and rename to output file.
@@ -122,4 +142,34 @@ func (f *DelayedFile) Close() error {
 	}
 
 	return nil
+}
+
+// AbortBuffer is a buffer that can be aborted.
+type AbortBuffer struct {
+	Buffer *bytes.Buffer
+
+	aborted bool
+}
+
+// NewAbortBuffer creates a new abort buffer
+func NewAbortBuffer(b []byte) *AbortBuffer {
+	return &AbortBuffer{
+		Buffer: bytes.NewBuffer(b),
+	}
+}
+
+// Write writes to the underlying buffer.
+//
+// If the buffer was aborted, an error is returned.
+func (a *AbortBuffer) Write(b []byte) (int, error) {
+	if a.aborted {
+		return 0, errors.New("Write operations are aborted.")
+	}
+
+	return a.Buffer.Write(b)
+}
+
+// Abort blocks all subsequent write operations.
+func (a *AbortBuffer) Abort() {
+	a.aborted = true
 }

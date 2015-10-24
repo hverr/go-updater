@@ -7,7 +7,7 @@
 //	u:= &Updater{
 //		App: NewGitHub("hverr", "status-dashboard", nil),
 //		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
-//		WriterForAsset: func(a Asset) (io.Writer, error) {
+//		WriterForAsset: func(a Asset) (AbortWriter, error) {
 //			return f, nil
 //		},
 //	}
@@ -29,10 +29,7 @@
 //
 package updater
 
-import (
-	"errors"
-	"io"
-)
+import "errors"
 
 // Updater is used to directly update the application.
 type Updater struct {
@@ -52,7 +49,7 @@ type Updater struct {
 	// io.Writer.
 	//
 	// You can return nil to ignore the asset.
-	WriterForAsset func(Asset) (io.Writer, error)
+	WriterForAsset func(Asset) (AbortWriter, error)
 }
 
 // Check will check for updates.

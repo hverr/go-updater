@@ -1,7 +1,6 @@
 package updater
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"testing"
@@ -125,11 +124,11 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 	// Asset that cannot be opened
 	a4 := &testAsset{}
 
-	validWriter := bytes.NewBuffer(nil)
-	errorWriter := bytes.NewBuffer(nil)
+	validWriter := NewAbortBuffer(nil)
+	errorWriter := NewAbortBuffer(nil)
 	errorForOpening := errors.New("Error for opening")
 	u := Updater{
-		WriterForAsset: func(a Asset) (io.Writer, error) {
+		WriterForAsset: func(a Asset) (AbortWriter, error) {
 			if a == a1 {
 				return validWriter, nil
 			} else if a == a2 {
@@ -149,7 +148,7 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 	{
 		err := u.UpdateTo(&testRelease{assets: []Asset{a1}})
 		assert.Nil(t, err)
-		assert.Equal(t, "Hello World!", validWriter.String())
+		assert.Equal(t, "Hello World!", validWriter.Buffer.String())
 	}
 
 	// Asset without writer
@@ -162,7 +161,7 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 	{
 		err := u.UpdateTo(&testRelease{assets: []Asset{a3}})
 		assert.Equal(t, writeErr, err)
-		assert.Equal(t, 0, errorWriter.Len())
+		assert.Equal(t, 0, errorWriter.Buffer.Len())
 	}
 
 	// Asset with error

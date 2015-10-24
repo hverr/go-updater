@@ -70,6 +70,32 @@ func TestFileBuffer(t *testing.T) {
 		assert.Nil(t, err, "Could not clean up: %v", err)
 	}
 
+	// Aborted
+	{
+		// Write file
+		b := &FileBuffer{}
+		defer func() {
+			err := b.Close()
+			assert.Nil(t, err, "Close error: %v", err)
+		}()
+
+		// Successful write
+		_, err := b.Write([]byte("hello world"))
+		assert.Nil(t, err, "Write error: %v", err)
+
+		// Abort
+		b.Abort()
+
+		// Unsuccessful write
+		_, err = b.Write([]byte("should not write"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "abort")
+
+		// Clean up
+		err = os.Remove(b.Path)
+		assert.Nil(t, err, "Could not clean up: %v", err)
+	}
+
 	// Error file
 	{
 		b := &FileBuffer{
@@ -220,6 +246,31 @@ func TestDelayedFile(t *testing.T) {
 	}
 }
 
+func TestAbortBuffer(t *testing.T) {
+	// All valid
+	{
+		b := NewAbortBuffer(nil)
+		_, err := b.Write([]byte("hello world"))
+		assert.Nil(t, err)
+		assert.Equal(t, "hello world", b.Buffer.String())
+	}
+
+	// Abort
+	{
+		b := NewAbortBuffer(nil)
+
+		_, err := b.Write([]byte("hello world"))
+		assert.Nil(t, err)
+
+		b.Abort()
+		_, err = b.Write([]byte("should not be written"))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "abort")
+
+		assert.Equal(t, "hello world", b.Buffer.String())
+	}
+}
+
 // How to use the DelayedFile to make sure network downloads do not corrupt the
 // update process.
 func ExampleDelayedFile() {
@@ -231,11 +282,35 @@ func ExampleDelayedFile() {
 	u := &Updater{
 		App: NewGitHub("hverr", "status-dashboard", nil),
 		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
-		WriterForAsset: func(a Asset) (io.Writer, error) {
+		WriterForAsset: func(a Asset) (AbortWriter, error) {
 			return f, nil
 		},
 	}
 
 	// Update to latest release
-	u.UpdateTo(nil)
+	err := u.UpdateTo(nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// How to use AbortBuffer to download updates in a buffer.
+func ExampleAbortBuffer() {
+	// The buffer
+	b := NewAbortBuffer(nil)
+
+	// The updater
+	u := &Updater{
+		App: NewGitHub("hverr", "status-dashboard", nil),
+		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
+		WriterForAsset: func(a Asset) (AbortWriter, error) {
+			return b, nil
+		},
+	}
+
+	// Update to latest release
+	err := u.UpdateTo(nil)
+	if err != nil {
+		panic(err)
+	}
 }
