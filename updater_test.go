@@ -162,6 +162,7 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 		err := u.UpdateTo(&testRelease{assets: []Asset{a3}})
 		assert.Equal(t, writeErr, err)
 		assert.Equal(t, 0, errorWriter.Buffer.Len())
+		assert.True(t, errorWriter.aborted)
 	}
 
 	// Asset with error

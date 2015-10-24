@@ -96,16 +96,27 @@ func (u *Updater) UpdateTo(release Release) error {
 		}
 	}
 
+	writers := make([]AbortWriter, 0)
+	var abort = func() {
+		for _, w := range writers {
+			w.Abort()
+		}
+	}
+
 	for _, a := range release.Assets() {
 		w, err := u.WriterForAsset(a)
 		if err != nil {
+			abort()
 			return err
 		}
 
+		writers = append(writers, w)
+
 		if w != nil {
-			e := a.Write(w)
-			if e != nil {
-				return e
+			err := a.Write(w)
+			if err != nil {
+				abort()
+				return err
 			}
 		}
 	}
