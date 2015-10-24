@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -181,6 +182,69 @@ func TestGithubAsset(t *testing.T) {
 	name := "assetname"
 	a.Asset.Name = &name
 	assert.Equal(t, "assetname", a.Name())
+}
+
+func TestGithubAssetWrite(t *testing.T) {
+	// Valid contents
+	{
+		ts, _ := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("Hello World!"))
+		})
+		defer ts.Close()
+
+		asset := &githubAsset{}
+		asset.Asset.URL = &ts.URL
+		buf := bytes.NewBuffer(nil)
+
+		err := asset.Write(buf)
+		assert.Nil(t, err, "Unexepected error %v:", err)
+		assert.Equal(t, "Hello World!", buf.String())
+	}
+
+	// No URL
+	{
+		asset := &githubAsset{}
+		err := asset.Write(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "No download URL")
+	}
+
+	// Connection error
+	{
+		ts, _ := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			h := w.(http.Hijacker)
+			conn, _, _ := h.Hijack()
+			conn.Close()
+		})
+		defer ts.Close()
+
+		asset := &githubAsset{}
+		asset.Asset.URL = &ts.URL
+		buf := bytes.NewBuffer(nil)
+
+		err := asset.Write(buf)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "EOF")
+		assert.Equal(t, 0, buf.Len())
+	}
+
+	// HTTP error
+	{
+		ts, _ := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(500)
+		})
+		defer ts.Close()
+
+		asset := &githubAsset{}
+		asset.Asset.URL = &ts.URL
+		buf := bytes.NewBuffer(nil)
+
+		err := asset.Write(buf)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "Internal Server Error")
+		assert.Equal(t, 0, buf.Len())
+	}
+
 }
 
 var validReleasesJSON = `

@@ -2,7 +2,9 @@ package updater
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/google/go-github/github"
 )
@@ -133,5 +135,21 @@ func (r *githubAsset) Name() string {
 }
 
 func (r *githubAsset) Write(w io.Writer) error {
-	return errors.New("Not implemented.")
+	if r.Asset.URL == nil {
+		return errors.New("No download URL available.")
+	}
+
+	resp, err := http.Get(*r.Asset.URL)
+	if err != nil {
+		return err
+	} else if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"Could not download %v: %v",
+			*r.Asset.URL, resp.Status,
+		)
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(w, resp.Body)
+	return err
 }
