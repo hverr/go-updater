@@ -72,7 +72,7 @@ func (a *FileBuffer) Close() error {
 // DelayedFile is a file that is first written to a temporary location.
 //
 // All writes to a delayed file go to a temporary file. When the file is closed,
-// the data is manually copied to the original destination path.
+// the destination file is replaced using os.Rename.
 //
 // This file type can be used to assure that all data is correctly received from
 // an unreliable source, before the final destination file is written to.
@@ -81,17 +81,12 @@ type DelayedFile struct {
 
 	buffer  FileBuffer
 	aborted bool
-
-	copier func(io.Writer, io.Reader) (int64, error)
 }
 
 // NewDelayedFile creates a new delayed file.
 func NewDelayedFile(path string) *DelayedFile {
 	return &DelayedFile{
 		path: path,
-		copier: func(w io.Writer, r io.Reader) (int64, error) {
-			return io.Copy(w, r)
-		},
 	}
 }
 
@@ -122,26 +117,8 @@ func (f *DelayedFile) Close() error {
 		return nil
 	}
 
-	// Open the destination file
-	dest, err := os.Create(f.path)
-	if err != nil {
-		return err
-	}
-	defer dest.Close()
-
-	// Open the source file
-	source, err := os.Open(f.buffer.Path)
-	if err != nil {
-		return err
-	}
-	defer source.Close()
-
-	// Copy
-	if _, err := f.copier(dest, source); err != nil {
-		return err
-	}
-
-	return nil
+	// Rename
+	return os.Rename(f.buffer.Path, f.path)
 }
 
 // AbortBuffer is a buffer that can be aborted.

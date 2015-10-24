@@ -1,8 +1,6 @@
 package updater
 
 import (
-	"errors"
-	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -218,31 +216,6 @@ func TestDelayedFile(t *testing.T) {
 		// Make sure the contents were not copied
 		_, err = os.Stat(path)
 		assert.True(t, os.IsNotExist(err))
-	}
-
-	// Faulty copier
-	{
-		// Get filename
-		f, err := ioutil.TempFile("", "testing-")
-		require.Nil(t, err)
-		path := f.Name()
-		f.Close()
-		os.Remove(path)
-
-		// Write
-		df := NewDelayedFile(path)
-		_, err = df.Write([]byte("hello world"))
-		assert.Nil(t, err, "Could not write to file: %v", err)
-
-		// Setup failure
-		testErr := errors.New("Copy test error")
-		df.copier = func(io.Writer, io.Reader) (int64, error) {
-			return 0, testErr
-		}
-
-		// Close
-		err = df.Close()
-		assert.Equal(t, testErr, err)
 	}
 }
 
