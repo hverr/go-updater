@@ -1,13 +1,14 @@
 // Package updater provides auto-updating functionality for your application.
 //
 // Example for a GitHub application:
-//	data := bytes.NewBuffer(nil)
+//	f := NewDelayedFile(os.Args[0])
+//	defer f.Close()
 //
 //	u:= &Updater{
 //		App: NewGitHub("hverr", "status-dashboard", nil),
 //		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
 //		WriterForAsset: func(a Asset) (io.Writer, error) {
-//			return data, nil
+//			return f, nil
 //		},
 //	}
 //
