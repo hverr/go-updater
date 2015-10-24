@@ -219,3 +219,23 @@ func TestDelayedFile(t *testing.T) {
 		assert.Equal(t, testErr, err)
 	}
 }
+
+// How to use the DelayedFile to make sure network downloads do not corrupt the
+// update process.
+func ExampleDelayedFile() {
+	// The final destination
+	f := NewDelayedFile(os.Args[0])
+	defer f.Close()
+
+	// The updater
+	u := &Updater{
+		App: NewGitHub("hverr", "status-dashboard", nil),
+		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
+		WriterForAsset: func(a Asset) (io.Writer, error) {
+			return f, nil
+		},
+	}
+
+	// Update to latest release
+	u.UpdateTo(nil)
+}
