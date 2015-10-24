@@ -71,7 +71,7 @@ func TestUpdaterUpdateWithoutRelease(t *testing.T) {
 	{
 		testErr := errors.New("Test check error.")
 		app.FQuery = func() error { return testErr }
-		err := u.Update(nil)
+		err := u.UpdateTo(nil)
 		assert.Equal(t, err, testErr)
 	}
 
@@ -82,7 +82,7 @@ func TestUpdaterUpdateWithoutRelease(t *testing.T) {
 			return &testRelease{identifier: "new-release"}
 		}
 		u.CurrentReleaseIdentifier = "new-release"
-		err := u.Update(nil)
+		err := u.UpdateTo(nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "already up to date")
 	}
@@ -94,7 +94,7 @@ func TestUpdaterUpdateWithoutRelease(t *testing.T) {
 			return &testRelease{identifier: "ne-release"}
 		}
 		u.CurrentReleaseIdentifier = "old-release"
-		err := u.Update(nil)
+		err := u.UpdateTo(nil)
 		assert.Nil(t, err)
 	}
 }
@@ -141,20 +141,20 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 
 	// Valid writer
 	{
-		err := u.Update(&testRelease{assets: []Asset{a1}})
+		err := u.UpdateTo(&testRelease{assets: []Asset{a1}})
 		assert.Nil(t, err)
 		assert.Equal(t, "Hello World!", validWriter.String())
 	}
 
 	// Asset without writer
 	{
-		err := u.Update(&testRelease{assets: []Asset{a2}})
+		err := u.UpdateTo(&testRelease{assets: []Asset{a2}})
 		assert.Nil(t, err)
 	}
 
 	// Error writer
 	{
-		err := u.Update(&testRelease{assets: []Asset{a3}})
+		err := u.UpdateTo(&testRelease{assets: []Asset{a3}})
 		assert.Equal(t, writeErr, err)
 		assert.Equal(t, 0, errorWriter.Len())
 	}

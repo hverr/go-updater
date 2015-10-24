@@ -1,3 +1,31 @@
+// Package updater provides auto-updating functionality for your application.
+//
+// Example for a GitHub application:
+//	data := bytes.NewBuffer(nil)
+//
+//	u:= &Updater{
+//		App: NewGitHub("hverr", "status-dashboard", nil),
+//		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
+//		WriterForAsset: func(a Asset) io.Writer {
+//			return data
+//		},
+//	}
+//
+//	r, err := u.Check()
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	if r == nil {
+//		fmt.Println("No updates available.")
+//	} else {
+//		fmt.Println("Updating to", r.Name(), "-", r.Identifier())
+//		err = u.UpdateTo(r)
+//		if err != nil {
+//			panic(err)
+//		}
+//	}
+//
 package updater
 
 import (
@@ -58,7 +86,7 @@ func (u *Updater) Check() (Release, error) {
 //
 // If you don't specify a release, the updater will first fetch all releases and
 // try to update to the most recent one.
-func (u *Updater) Update(release Release) error {
+func (u *Updater) UpdateTo(release Release) error {
 	if release == nil {
 		var err error
 		release, err = u.Check()
