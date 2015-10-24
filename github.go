@@ -135,17 +135,17 @@ func (r *githubAsset) Name() string {
 }
 
 func (r *githubAsset) Write(w io.Writer) error {
-	if r.Asset.URL == nil {
+	if r.Asset.BrowserDownloadURL == nil {
 		return errors.New("No download URL available.")
 	}
 
-	resp, err := http.Get(*r.Asset.URL)
+	resp, err := http.Get(*r.Asset.BrowserDownloadURL)
 	if err != nil {
 		return err
 	} else if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf(
 			"Could not download %v: %v",
-			*r.Asset.URL, resp.Status,
+			*r.Asset.BrowserDownloadURL, resp.Status,
 		)
 	}
 	defer resp.Body.Close()

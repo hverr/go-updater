@@ -193,7 +193,7 @@ func TestGithubAssetWrite(t *testing.T) {
 		defer ts.Close()
 
 		asset := &githubAsset{}
-		asset.Asset.URL = &ts.URL
+		asset.Asset.BrowserDownloadURL = &ts.URL
 		buf := bytes.NewBuffer(nil)
 
 		err := asset.Write(buf)
@@ -219,7 +219,7 @@ func TestGithubAssetWrite(t *testing.T) {
 		defer ts.Close()
 
 		asset := &githubAsset{}
-		asset.Asset.URL = &ts.URL
+		asset.Asset.BrowserDownloadURL = &ts.URL
 		buf := bytes.NewBuffer(nil)
 
 		err := asset.Write(buf)
@@ -236,7 +236,7 @@ func TestGithubAssetWrite(t *testing.T) {
 		defer ts.Close()
 
 		asset := &githubAsset{}
-		asset.Asset.URL = &ts.URL
+		asset.Asset.BrowserDownloadURL = &ts.URL
 		buf := bytes.NewBuffer(nil)
 
 		err := asset.Write(buf)
