@@ -6,8 +6,8 @@
 //	u:= &Updater{
 //		App: NewGitHub("hverr", "status-dashboard", nil),
 //		CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
-//		WriterForAsset: func(a Asset) io.Writer {
-//			return data
+//		WriterForAsset: func(a Asset) (io.Writer, error) {
+//			return data, nil
 //		},
 //	}
 //
@@ -51,7 +51,7 @@ type Updater struct {
 	// io.Writer.
 	//
 	// You can return nil to ignore the asset.
-	WriterForAsset func(Asset) io.Writer
+	WriterForAsset func(Asset) (io.Writer, error)
 }
 
 // Check will check for updates.
@@ -99,7 +99,11 @@ func (u *Updater) UpdateTo(release Release) error {
 	}
 
 	for _, a := range release.Assets() {
-		w := u.WriterForAsset(a)
+		w, err := u.WriterForAsset(a)
+		if err != nil {
+			return err
+		}
+
 		if w != nil {
 			e := a.Write(w)
 			if e != nil {

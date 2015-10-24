@@ -122,19 +122,25 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 		write: func(io.Writer) error { return writeErr },
 	}
 
+	// Asset that cannot be opened
+	a4 := &testAsset{}
+
 	validWriter := bytes.NewBuffer(nil)
 	errorWriter := bytes.NewBuffer(nil)
+	errorForOpening := errors.New("Error for opening")
 	u := Updater{
-		WriterForAsset: func(a Asset) io.Writer {
+		WriterForAsset: func(a Asset) (io.Writer, error) {
 			if a == a1 {
-				return validWriter
+				return validWriter, nil
 			} else if a == a2 {
-				return nil
+				return nil, nil
 			} else if a == a3 {
-				return errorWriter
+				return errorWriter, nil
+			} else if a == a4 {
+				return nil, errorForOpening
 			} else {
 				require.True(t, false, "Unknown asset name: %v", a.Name())
-				return nil
+				return nil, nil
 			}
 		},
 	}
@@ -157,6 +163,12 @@ func TestUpdaterUpdateWithRelease(t *testing.T) {
 		err := u.UpdateTo(&testRelease{assets: []Asset{a3}})
 		assert.Equal(t, writeErr, err)
 		assert.Equal(t, 0, errorWriter.Len())
+	}
+
+	// Asset with error
+	{
+		err := u.UpdateTo(&testRelease{assets: []Asset{a4}})
+		assert.Equal(t, errorForOpening, err)
 	}
 }
 
