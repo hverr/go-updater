@@ -2,6 +2,7 @@ package updater
 
 import (
 	"errors"
+	"io"
 
 	"github.com/google/go-github/github"
 )
@@ -15,8 +16,13 @@ type githubApp struct {
 
 type githubRelease struct {
 	RepositoryRelease github.RepositoryRelease
+	Reference         *github.Reference
 
-	Reference *github.Reference
+	assets []Asset
+}
+
+type githubAsset struct {
+	Asset github.ReleaseAsset
 }
 
 // NewGitHub creates an Application that is hosted on GitHub.
@@ -44,9 +50,7 @@ func (app *githubApp) Query() error {
 
 	s := make([]Release, len(releases))
 	for i, r := range releases {
-		s[i] = &githubRelease{
-			RepositoryRelease: r,
-		}
+		s[i] = newGithubRelease(r)
 	}
 	app.releases = s
 
@@ -67,6 +71,18 @@ func (app *githubApp) LatestRelease() Release {
 	}
 
 	return app.releases[0]
+}
+
+func newGithubRelease(r github.RepositoryRelease) *githubRelease {
+	s := make([]Asset, len(r.Assets))
+	for i, a := range r.Assets {
+		s[i] = &githubAsset{a}
+	}
+
+	return &githubRelease{
+		RepositoryRelease: r,
+		assets:            s,
+	}
 }
 
 func (r *githubRelease) Name() string {
@@ -90,6 +106,10 @@ func (r *githubRelease) Identifier() string {
 	return *r.Reference.Object.SHA
 }
 
+func (r *githubRelease) Assets() []Asset {
+	return r.assets
+}
+
 func (r *githubRelease) queryReference(app *githubApp) error {
 	if r.RepositoryRelease.TagName == nil {
 		return errors.New("No tag name available.")
@@ -103,4 +123,15 @@ func (r *githubRelease) queryReference(app *githubApp) error {
 
 	r.Reference = ref
 	return nil
+}
+
+func (r *githubAsset) Name() string {
+	if s := r.Asset.Name; s != nil {
+		return *s
+	}
+	return ""
+}
+
+func (r *githubAsset) Write(w io.Writer) error {
+	return errors.New("Not implemented.")
 }

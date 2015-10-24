@@ -53,6 +53,10 @@ func TestGitHubQuery(t *testing.T) {
 		if release != nil {
 			assert.Equal(t, "v1.0.0", release.Name())
 			assert.Equal(t, "Description of the release", release.Information())
+			assert.Equal(t, 1, len(release.Assets()))
+			if len(release.Assets()) != 0 {
+				assert.Equal(t, "example.zip", release.Assets()[0].Name())
+			}
 		}
 	}
 
@@ -167,6 +171,16 @@ func TestQueryReference(t *testing.T) {
 		err := r.queryReference(app.(*githubApp))
 		assert.Error(t, err)
 	}
+}
+
+func TestGithubAsset(t *testing.T) {
+	a := &githubAsset{}
+
+	assert.Equal(t, "", a.Name())
+
+	name := "assetname"
+	a.Asset.Name = &name
+	assert.Equal(t, "assetname", a.Name())
 }
 
 var validReleasesJSON = `

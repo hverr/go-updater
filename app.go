@@ -1,5 +1,7 @@
 package updater
 
+import "io"
+
 // App is a generic Go application capapble of querying update
 // information and updating itself.
 type App interface {
@@ -22,4 +24,16 @@ type Release interface {
 	// Identifier should be the identifier of this release. This identifier is
 	// used to compare releases.
 	Identifier() string
+
+	// Assets sould return all assets attached to this release.
+	Assets() []Asset
+}
+
+// Asset represents a downloadable asset.
+type Asset interface {
+	// Name should return the file name of the asset.
+	Name() string
+
+	// Write should write the contents of the asset.
+	Write(w io.Writer) error
 }
