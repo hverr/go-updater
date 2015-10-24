@@ -18,4 +18,8 @@ type Release interface {
 
 	// Information is some human-readable information for this release.
 	Information() string
+
+	// Identifier should be the identifier of this release. This identifier is
+	// used to compare releases.
+	Identifier() string
 }

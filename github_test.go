@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-github/github"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestClient(f func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, *github.Client) {
@@ -22,7 +23,7 @@ func newTestClient(f func(w http.ResponseWriter, r *http.Request)) (*httptest.Se
 		Transport: transport,
 	})
 
-	u, _ := url.Parse("http://localhost/api/")
+	u, _ := url.Parse("http://localhost/")
 	client.BaseURL = u
 
 	return ts, client
@@ -32,7 +33,13 @@ func TestGitHubQuery(t *testing.T) {
 	// With valid JSON
 	{
 		ts, cl := newTestClient(func(w http.ResponseWriter, r *http.Request) {
-			strings.NewReader(validReleasesJSON).WriteTo(w)
+			if r.URL.Path == "/repos/hverr/reponame/releases" {
+				strings.NewReader(validReleasesJSON).WriteTo(w)
+			} else if r.URL.Path == "/repos/hverr/reponame/git/refs/tags/v1.0.0" {
+				strings.NewReader(validReferenceJSON).WriteTo(w)
+			} else {
+				require.True(t, false, "Unexpected URL path: %v", r.URL.Path)
+			}
 		})
 		defer ts.Close()
 
@@ -49,7 +56,7 @@ func TestGitHubQuery(t *testing.T) {
 		}
 	}
 
-	// With invalid JSON
+	// With invalid JSON for releases
 	{
 		ts, cl := newTestClient(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("invalid json"))
@@ -59,6 +66,22 @@ func TestGitHubQuery(t *testing.T) {
 		app := NewGitHub("hverr", "reponame", cl)
 		err := app.Query()
 		assert.NotNil(t, err)
+	}
+
+	// With invalid JSON for reference
+	{
+		ts, cl := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/repos/hverr/reponame/releases" {
+				strings.NewReader(validReleasesJSON).WriteTo(w)
+			} else {
+				w.Write([]byte("invalid json"))
+			}
+		})
+		defer ts.Close()
+
+		app := NewGitHub("hverr", "reponame", cl)
+		err := app.Query()
+		assert.Error(t, err)
 	}
 }
 
@@ -85,14 +108,65 @@ func TestGitHubRelease(t *testing.T) {
 
 	assert.Equal(t, "", r.Name())
 	assert.Equal(t, "", r.Information())
+	assert.Equal(t, "", r.Identifier())
 
 	tagName := "v1.0.1"
 	body := "Hello World!"
+	sha := "f5240d16499717fef6f79ce16e5923e91467622d"
 	r.RepositoryRelease.TagName = &tagName
 	r.RepositoryRelease.Body = &body
+	r.Reference = &github.Reference{
+		Object: &github.GitObject{
+			SHA: &sha,
+		},
+	}
 
 	assert.Equal(t, "v1.0.1", r.Name())
 	assert.Equal(t, "Hello World!", r.Information())
+	assert.Equal(t, sha, r.Identifier())
+}
+
+func TestQueryReference(t *testing.T) {
+	// With valid JSON
+	{
+		ts, cl := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			strings.NewReader(validReferenceJSON).WriteTo(w)
+		})
+		defer ts.Close()
+
+		app := NewGitHub("hverr", "reponame", cl)
+		r := &githubRelease{}
+		tag := "v1.0.0"
+		r.RepositoryRelease.TagName = &tag
+		err := r.queryReference(app.(*githubApp))
+
+		assert.Nil(t, err, "Unexpected query error: %v", err)
+		assert.NotNil(t, r.Reference)
+		assert.Equal(t, "aa218f56b14c9653891f9e74264a383fa43fefbd", r.Identifier())
+	}
+
+	// Without tag name
+	{
+		r := &githubRelease{}
+		err := r.queryReference(nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "No tag name")
+	}
+
+	// Invalid JSON response
+	{
+		ts, cl := newTestClient(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("invalid json"))
+		})
+		defer ts.Close()
+
+		app := NewGitHub("hverr", "reponame", cl)
+		r := &githubRelease{}
+		tag := "v1.0.0"
+		r.RepositoryRelease.TagName = &tag
+		err := r.queryReference(app.(*githubApp))
+		assert.Error(t, err)
+	}
 }
 
 var validReleasesJSON = `
@@ -169,4 +243,16 @@ var validReleasesJSON = `
     ]
   }
 ]
+`
+
+var validReferenceJSON = `
+{
+  "ref": "refs/tags/v1.0.0",
+  "url": "https://api.github.com/repos/octocat/Hello-World/git/refs/tags/v1.0.0",
+  "object": {
+    "type": "commit",
+    "sha": "aa218f56b14c9653891f9e74264a383fa43fefbd",
+    "url": "https://api.github.com/repos/octocat/Hello-World/git/commits/aa218f56b14c9653891f9e74264a383fa43fefbd"
+  }
+}
 `
