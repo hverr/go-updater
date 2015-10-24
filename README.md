@@ -1,5 +1,6 @@
 # go-updater
 [![Build Status](https://travis-ci.org/hverr/go-updater.svg?branch=master)](https://travis-ci.org/hverr/go-updater)
+[![GoDoc](https://godoc.org/github.com/hverr/go-updater?status.svg)](http://godoc.org/github.com/hverr/go-updater)
 
 Package updater provides auto-updating functionality for your application.
 
