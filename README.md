@@ -1,3 +1,33 @@
 # go-updater
 
-Update your binary using GitHub releases.
+Package updater provides auto-updating functionality for your application.
+
+Example for a GitHub application:
+
+```go
+f := NewDelayedFile(os.Args[0])
+defer f.Close()
+
+u:= &Updater{
+	App: NewGitHub("hverr", "status-dashboard", nil),
+	CurrentReleaseIdentifier: "789611aec3d4b90512577b5dad9cf1adb6b20dcc",
+	WriterForAsset: func(a Asset) (AbortWriter, error) {
+		return f, nil
+	},
+}
+
+r, err := u.Check()
+if err != nil {
+	panic(err)
+}
+
+if r == nil {
+	fmt.Println("No updates available.")
+} else {
+	fmt.Println("Updating to", r.Name(), "-", r.Identifier())
+	err = u.UpdateTo(r)
+	if err != nil {
+		panic(err)
+	}
+}
+```
