@@ -17,6 +17,8 @@ func TestFileBuffer(t *testing.T) {
 		require.Nil(t, err)
 		path := f.Name()
 		f.Close()
+		err = os.Chmod(path, 0770)
+		require.Nil(t, err)
 
 		// Write file
 		b := &FileBuffer{
@@ -37,6 +39,14 @@ func TestFileBuffer(t *testing.T) {
 		data, err := ioutil.ReadAll(f)
 		assert.Nil(t, err, "Could not read file: %v", err)
 		assert.Equal(t, "hello world", string(data))
+
+		// Check permissions
+		info, err := os.Stat(path)
+		assert.Nil(t, err, "Could not stat: %v", err)
+		assert.NotNil(t, info)
+		if info != nil {
+			assert.EqualValues(t, 0770, info.Mode())
+		}
 
 		// Clean up
 		err = os.Remove(path)

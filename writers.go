@@ -118,7 +118,22 @@ func (f *DelayedFile) Close() error {
 	}
 
 	// Rename
-	return os.Rename(f.buffer.Path, f.path)
+	var mode *os.FileMode
+	if info, _ := os.Stat(f.path); info != nil {
+		m := info.Mode()
+		mode = &m
+	}
+
+	err := os.Rename(f.buffer.Path, f.path)
+	if err != nil {
+		return err
+	}
+
+	if mode != nil {
+		return os.Chmod(f.path, *mode)
+	}
+
+	return nil
 }
 
 // AbortBuffer is a buffer that can be aborted.
